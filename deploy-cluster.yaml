@@ -1,0 +1,224 @@
+---
+- name: Deploy OpenShift Rosa to AWS, and install and configure openshift-gitops-operator
+  hosts: localhost
+  gather_facts: true
+  become: false
+  vars_files:
+    - vault.yaml
+  vars:
+    aws_region: 'us-east-2'
+    aws_output_format: 'json'
+    cluster_name: 'arctiq-mission'
+    cluster_version: '4.9.0'
+    compute_machine_type: 'm5.xlarge'
+    compute_nodes: '2'
+  tasks:
+
+  - name: Checking if AWS CLI is installed
+    stat:
+      path: /usr/local/bin/aws
+    register: aws_stat_result
+    
+  - fail:
+      msg: "Please make sure the AWS CLI is installed before running this playbook"
+    when: aws_stat_result.stat.exists == false
+
+  - name: Create aws configuration folder
+    file:
+      path: "{{ ansible_user_dir }}/.aws"
+      state: directory
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: '0755'
+
+  - name: Configure AWS credentials file
+    copy:
+      dest: "{{ ansible_user_dir }}/.aws/credentials"
+      content: |
+        [default]
+        aws_access_key_id={{ aws_access_key_id }}
+        aws_secret_access_key={{ aws_secret_access_key }}
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: '0600'
+
+  - name: Configure AWS config file
+    copy:
+      dest: "{{ ansible_user_dir }}/.aws/config"
+      content: |
+        [default]
+        region={{ aws_region }}
+        output={{ aws_output_format }}
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: '0600'
+
+  - name: Test AWS configuration
+    shell: /usr/local/bin/aws sts get-caller-identity
+    register: awx_test
+    failed_when: awx_test.rc != 0
+
+  - name: Ensure ELB role exists
+    shell: /usr/local/bin/aws iam get-role --role-name "AWSServiceRoleForElasticLoadBalancing" || aws iam create-service-linked-role --aws-service-name "elasticloadbalancing.amazonaws.com"
+    register: aws_lb
+    failed_when: aws_lb.rc != 0
+
+  - name: Check if ROSA CLI is installed
+    stat:
+      path: /usr/local/bin/rosa
+    register: rosa_stat_result
+    
+  - fail:
+      msg: "Please make sure the ROSA CLI is installed before running this playbook"
+    when: rosa_stat_result.stat.exists == false
+
+  - name: Execute ROSA login
+    shell: /usr/local/bin/rosa login --token="{{ rosa_token }}"
+    register: rosa_login
+    failed_when: rosa_login.rc != 0
+
+  - name: Verify Rosa credentials
+    shell: /usr/local/bin/rosa whoami
+    register: rosa_whoami
+    failed_when: rosa_whoami.rc != 0
+  
+  - name: Verify OpenShift CLI is installed
+    shell: /usr/local/bin/rosa verify openshift-client
+    register: rosa_verify_oc
+    
+  - fail:
+      msg: "Please make sure the OC CLI is installed before running this playbook"
+    when: rosa_verify_oc.rc != 0
+
+  - name: Create account roles
+    shell: /usr/local/bin/rosa create account-roles --mode auto --yes
+    register: rosa_account_roles
+    failed_when: rosa_account_roles.rc != 0
+
+  - name: Create OpenShift ROSA cluster
+    shell: /usr/local/bin/rosa create cluster --cluster-name {{ cluster_name }} --sts --compute-nodes {{ compute_nodes }} --version {{ cluster_version }} --compute-machine-type {{ compute_machine_type }}
+    register: rosa_create_cluster
+    failed_when: rosa_create_cluster.rc != 0
+
+  - name: Create Operator roles
+    shell: /usr/local/bin/rosa create operator-roles --mode auto --cluster {{ cluster_name }} --yes
+    register: rosa_operator_roles
+    failed_when: rosa_operator_roles.rc != 0
+
+  - name: Create OIDC provider
+    shell: /usr/local/bin/rosa create oidc-provider --mode auto --cluster {{ cluster_name }} --yes
+    register: rosa_oidc_provider
+    failed_when: rosa_oidc_provider.rc != 0
+
+  - name: Check installation status
+    shell: /usr/local/bin/rosa describe cluster --cluster {{ cluster_name }} | grep State
+    register: rosa_check_cluster
+    until: rosa_check_cluster.stdout.find('ready') !=-1
+    retries: 12
+    delay: 300
+
+  - name: Obtain console URL
+    shell: /usr/local/bin/rosa describe cluster -c {{ cluster_name }} | grep Console | awk '{print $NF}'
+    register: rosa_console
+
+  - name: Create Admin user
+    shell: /usr/local/bin/rosa create admin --cluster={{ cluster_name }} | grep cluster-admin
+    register: rosa_admin
+
+  - name: Log in to cluster
+    shell: "{{ rosa_admin.stdout }} --insecure-skip-tls-verify" 
+    register: oc_login
+    until: oc_login.rc == 0
+    retries: 10
+    delay: 120
+
+  - name: Deploy Hello world application via S2I
+    shell: oc new-project s2i-demo && oc new-app https://github.com/givaldolins/arctiq-mission.git --context-dir=/s2i-demo-app --name s2i-demo-app -l app=s2i-demo-app -n s2i-demo && oc expose service s2i-demo-app  -n s2i-demo
+#    shell: oc new-project s2i-app && oc new-app nodejs~https://github.com/sagar-jadhav/node-hello --name nodejs -l app=demo -n s2i-app && oc expose service nodejs -n s2i-app
+
+  - name: Install openshift-gitops-operator
+    k8s:
+      state: present
+      definition:
+        apiVersion: operators.coreos.com/v1alpha1
+        kind: Subscription
+        metadata:
+          name: openshift-gitops-operator
+          namespace: openshift-operators
+        spec:
+          channel: stable
+          name: openshift-gitops-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+
+  - name: Wait for all openshift-gitops pods become ready
+    shell: "/usr/local/bin/oc rollout status deployment {{ item }} --namespace=openshift-gitops"
+    register: argocd_pods_ready
+    until: item in argocd_pods_ready.stdout
+    retries: 10
+    delay: 30
+    with_items:
+      - cluster
+      - kam
+      - openshift-gitops-applicationset-controller
+      - openshift-gitops-dex-server
+      - openshift-gitops-redis
+      - openshift-gitops-repo-server
+      - openshift-gitops-server
+
+  - name: Create cluster configuration on ArgoCD
+    k8s:
+      definition:
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: cluster-configs
+          namespace: openshift-gitops
+        spec:
+          destination:
+            namespace: default
+            server: https://kubernetes.default.svc
+          project: default
+          source:
+            directory:
+              recurse: true
+            path: openshift-gitops/cluster
+            repoURL: https://github.com/givaldolins/arctiq-mission
+            targetRevision: HEAD
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+
+  - name: Create spring-petclinic app on ArgoCD
+    k8s:
+      definition:
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: app-spring-petclinic
+          namespace: openshift-gitops
+        spec:
+          destination:
+            namespace: spring-petclinic
+            server: https://kubernetes.default.svc
+          project: default
+          source:
+            directory:
+              recurse: true
+            path: openshift-gitops/app
+            repoURL: https://github.com/givaldolins/arctiq-mission.git
+            targetRevision: HEAD
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+  
+              
+  - name: Print cluster information
+    debug:
+      msg: 
+      - "The {{ cluster_name }} cluster has been installed successfully"
+      - "The Console URL is: {{ rosa_console.stdout }}"
+      - "Use the following command to log in to {{ cluster_name }}: {{ rosa_admin.stdout }}"
+

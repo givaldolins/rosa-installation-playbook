@@ -1,0 +1,11 @@
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: application-menu-rh-developer-blog
+spec:
+  href: 'https://arctiq.ca'
+  location: ApplicationMenu
+  text: Arctiq website
+  applicationMenu:
+    section: Awesome links
+    imageURL: https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_256,w_256,f_auto,q_auto:eco,dpr_1/xiofvszdttfldip46xrl
