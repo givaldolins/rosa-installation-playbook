@@ -1,4 +1,4 @@
-FROM registry.redhat.io/rhscl/nginx-112-rhel7:latest
+FROM nginx
 
 COPY index.html /opt/app-root/src/
 
