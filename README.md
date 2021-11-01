@@ -2,7 +2,7 @@
 A repository used to store code for my Arctic mission   ![badge](https://img.shields.io/badge/version-v1.0.0-success)
 
 ## Prerequisites:
-- An AWS account configured for supporting OpenShift Rosa [link](https://docs.openshift.com/rosa/rosa_getting_started_sts/rosa-sts-aws-prereqs.html);
+- An AWS account configured for supporting OpenShift Rosa [[link]](https://docs.openshift.com/rosa/rosa_getting_started_sts/rosa-sts-aws-prereqs.html);
 - A Red Hat account [[link]](access.redhat.com);
 - Enable ROSA in your AWS console [[link]](https://console.aws.amazon.com/rosa);
 - A ROSA Token: [[link]](https://console.redhat.com/openshift/token/rosa);
