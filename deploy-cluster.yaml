@@ -117,7 +117,7 @@
     shell: /usr/local/bin/rosa describe cluster --cluster {{ cluster_name }} | grep State
     register: rosa_check_cluster
     until: rosa_check_cluster.stdout.find('ready') !=-1
-    retries: 12
+    retries: 24
     delay: 300
 
   - name: Obtain console URL
