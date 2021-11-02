@@ -1,5 +1,5 @@
 # arctiq-mission
-A repository used to store code for my Arctic mission   ![badge](https://img.shields.io/badge/version-v1.0.0-success)
+A repository used to store code for my Arctiq mission   ![badge](https://img.shields.io/badge/version-v1.0.0-success)
 
 ## Prerequisites:
 - An AWS account configured for supporting OpenShift Rosa [[link]](https://docs.openshift.com/rosa/rosa_getting_started_sts/rosa-sts-aws-prereqs.html);
