@@ -74,7 +74,6 @@
       msg: "Please make sure the ROSA CLI is installed before running this playbook"
     when: rosa_stat_result.stat.exists == false
 
-
   - name: Execute ROSA login
     shell: /usr/local/bin/rosa login --token="{{ rosa_token }}"
     register: rosa_login
@@ -89,7 +88,6 @@
     shell: /usr/local/bin/rosa verify openshift-client
     register: rosa_verify_oc
     ignore_errors: true
-
     
   - fail:
       msg: "Please make sure the OC CLI is installed before running this playbook"
@@ -139,7 +137,6 @@
 
   - name: Deploy Hello world application via S2I
     shell: oc new-project s2i-demo && oc new-app nginx~https://github.com/givaldolins/arctiq-mission.git --context-dir=/s2i-demo-app --name s2i-demo-app -l app=s2i-demo-app -n s2i-demo && oc expose service s2i-demo-app  -n s2i-demo
-#    shell: oc new-project s2i-app && oc new-app nodejs~https://github.com/sagar-jadhav/node-hello --name nodejs -l app=demo -n s2i-app && oc expose service nodejs -n s2i-app
 
   - name: Install openshift-gitops-operator
     k8s:
@@ -218,7 +215,6 @@
             automated:
               prune: true
               selfHeal: true
-  
               
   - name: Print cluster information
     debug:
