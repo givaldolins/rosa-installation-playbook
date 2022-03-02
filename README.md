@@ -3,7 +3,7 @@ A repository used to store code for automation OpenShift ROSA installation ![bad
 
 ## Prerequisites:
 - An AWS account configured for supporting OpenShift Rosa [[link]](https://docs.openshift.com/rosa/rosa_getting_started_sts/rosa-sts-aws-prereqs.html);
-- A Red Hat account [[link]](access.redhat.com);
+- A Red Hat account [[link]](https://access.redhat.com);
 - Enable ROSA in your AWS console [[link]](https://console.aws.amazon.com/rosa);
 - A ROSA Token: [[link]](https://console.redhat.com/openshift/token/rosa);
 - The following tools installed in the machine that will run this playbook:
