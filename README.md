@@ -1,5 +1,5 @@
-# arctiq-mission
-A repository used to store code for my Arctiq mission   ![badge](https://img.shields.io/badge/version-v1.0.0-success)
+# Rosa Installation Playbook
+A repository used to store code for automation OpenShift ROSA installation ![badge](https://img.shields.io/badge/version-v1.0.0-success)
 
 ## Prerequisites:
 - An AWS account configured for supporting OpenShift Rosa [[link]](https://docs.openshift.com/rosa/rosa_getting_started_sts/rosa-sts-aws-prereqs.html);
@@ -13,6 +13,6 @@ A repository used to store code for my Arctiq mission   ![badge](https://img.shi
 
 ## Usage:
 ```bash
-$ git clone https://github.com/givaldolins/arctiq-mission
+$ git clone https://github.com/givaldolins/rosa-installation-playbook
 $ ansible-playbook deploy-cluster.yaml --ask-vault-password -vvv
 ```

@@ -8,7 +8,7 @@
   vars:
     aws_region: 'us-east-2'
     aws_output_format: 'json'
-    cluster_name: 'arctiq-mission'
+    cluster_name: 'cluster-example'
     cluster_version: '4.9.0'
     compute_machine_type: 'm5.xlarge'
     compute_nodes: '2'
@@ -136,7 +136,7 @@
     delay: 120
 
   - name: Deploy Hello world application via S2I
-    shell: oc new-project s2i-demo && oc new-app nginx~https://github.com/givaldolins/arctiq-mission.git --context-dir=/s2i-demo-app --name s2i-demo-app -l app=s2i-demo-app -n s2i-demo && oc expose service s2i-demo-app  -n s2i-demo
+    shell: oc new-project s2i-demo && oc new-app nginx~https://github.com/givaldolins/rosa-installation-playbook.git --context-dir=/s2i-demo-app --name s2i-demo-app -l app=s2i-demo-app -n s2i-demo && oc expose service s2i-demo-app  -n s2i-demo
 
   - name: Install openshift-gitops-operator
     k8s:
@@ -185,7 +185,7 @@
             directory:
               recurse: true
             path: openshift-gitops/cluster
-            repoURL: https://github.com/givaldolins/arctiq-mission
+            repoURL: https://github.com/givaldolins/rosa-installation-playbook
             targetRevision: HEAD
           syncPolicy:
             automated:
@@ -209,7 +209,7 @@
             directory:
               recurse: true
             path: openshift-gitops/app
-            repoURL: https://github.com/givaldolins/arctiq-mission.git
+            repoURL: https://github.com/givaldolins/rosa-installation-playbook.git
             targetRevision: HEAD
           syncPolicy:
             automated:
